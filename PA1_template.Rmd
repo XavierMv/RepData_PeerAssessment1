@@ -1,25 +1,140 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research Markdown"
+author: "Xavier Magaña Vera"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## Load the csv file into the markdown
+
+```{r, message=FALSE, echo=TRUE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+setwd("C:/Users/xavie/OneDrive/Escritorio/ReproducibleResearch/RepData_PeerAssessment1")
+activity <- read_csv("C:/Users/xavie/OneDrive/Escritorio/ReproducibleResearch/activity.csv")
+```
+
+## Histogram 
+
+```{r, message=FALSE, warning=FALSE, echo=TRUE}
+acdate <- activity %>%
+  group_by(date) %>%
+  summarise(steps = sum(steps))
+#png("histogram.png")
+ggplot(acdate, aes(x=steps)) +
+  geom_histogram() +
+  theme_bw() +
+  ggtitle("Steps Histogram")
+#dev.off()
+```
+
+
+## Mean and Median
+
+```{r echo=TRUE}
+acdatemm <- acdate %>%
+  summarise(mean = mean(steps, na.rm = TRUE), median = median(steps, na.rm = TRUE))
+acdatemm
+```
 
 
 
-## What is mean total number of steps taken per day?
+## 5 minute interval time series 
+
+```{r, warning=FALSE, message=FALSE, echo=TRUE}
+int <- na.omit(activity) %>%
+  group_by(interval) %>%
+  summarise(steps = mean(steps))
+#png("timeSeries.png")
+ggplot(int, aes(x=interval, y=steps)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  ggtitle("5-minute intervals")
+#dev.off()
+attach(int)
+```
+## Maximum number of steps 
+
+```{r}
+INTERVAL <- interval[which(steps == max(steps))]
+STEPS <- steps[which(interval == 835)]
+data.frame(INTERVAL, STEPS)
+```
+
+## Imputing NA´s
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+length(which(!is.na(activity$steps)))
+activityna <- activity[which(!is.na(activity$steps)),]
+activityna$Dayclass <-as.factor(ifelse(weekdays(activityna$date)=="Saturday" | weekdays(activityna$date)=="Sunday","weekend","weekday"))
+activityna$dayofweek <- as.factor(weekdays(activityna$date))
+anai <- activityna %>%
+  group_by(interval) %>%
+  summarise(mean = mean(steps))
+NAitems <- activity[which(is.na(activity$steps)),]
+NAitems$steps <- ifelse(NAitems$interval == interval, anai$mean)
+NAitems$Dayclass <-as.factor(ifelse(weekdays(NAitems$date)=="Saturday" | weekdays(NAitems$date)=="Sunday","weekend","weekday"))
+NAitems$dayofweek <- as.factor(weekdays(NAitems$date))
+totalactivity <- rbind(activityna, NAitems)
+totalactivity
+```
+
+## Plotting - Weekends vs Weekdays 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+WeWd <- totalactivity %>%
+  group_by(interval, Dayclass) %>%
+  summarise(mean = mean(steps))
+iwe <- WeWd$interval[which(WeWd$Dayclass == "weekend")]
+dwe <- WeWd$Dayclass[which(WeWd$Dayclass == "weekend")]
+swe <- WeWd$mean[which(WeWd$Dayclass == "weekend")]
+We <- data.frame(iwe, dwe,swe)
+iwd <- WeWd$interval[which(WeWd$Dayclass == "weekday")]
+dwd <- WeWd$Dayclass[which(WeWd$Dayclass == "weekday")]
+swd <- WeWd$mean[which(WeWd$Dayclass == "weekday")]
+Wd <- data.frame(iwd, dwd,swd)
+#png("WeekendLineplot.png")
+ggplot(We, aes(x = iwe, y = swe)) + 
+  geom_line() +
+  theme_dark() +
+  ggtitle("Weekend")
+#dev.off()
+#png("WeekdayLineplot.png")
+ggplot(Wd, aes(x = iwd, y = swd)) + 
+  geom_line() +
+  theme_dark() +
+  ggtitle("Weekday")
+#dev.off()
+```
+
+## Histogram with imputed data
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+imputeddata <- totalactivity %>%
+  group_by(date) %>%
+  summarise(steps = sum(steps))
+#png("ImputedDataHist.png")
+ggplot(imputeddata, aes(x=steps)) +
+  geom_histogram() +
+  theme_bw() +
+  ggtitle("Steps Histogram")
+#dev.off()
+```
+
+Mean and Median with imputed data
+
+```{r}
+imputedmm <- imputeddata %>%
+  summarise(mean = mean(steps), median = median(steps))
+imputedmm
+```
 
 
 
-## What is the average daily activity pattern?
 
 
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
